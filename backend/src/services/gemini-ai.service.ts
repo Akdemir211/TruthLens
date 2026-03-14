@@ -51,19 +51,16 @@ class GeminiAIService {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    this.model = genAI.getGenerativeModel({
+    const modelConfig = {
       model: 'gemini-2.5-flash',
       generationConfig: {
         temperature: 0.1,
         topP: 0.8,
         maxOutputTokens: 8192,
       },
-      tools: [
-        {
-          googleSearch: {},
-        },
-      ],
-    });
+      tools: [{ googleSearch: {} }],
+    };
+    this.model = genAI.getGenerativeModel(modelConfig as Parameters<GoogleGenerativeAI['getGenerativeModel']>[0]);
     logger.info('✅ TruthAI (Gemini) hazır - Google Search Grounding aktif');
   }
 
