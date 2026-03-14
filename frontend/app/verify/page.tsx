@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import TextInput from '@/components/TextInput';
 import AnalysisResult from '@/components/AnalysisResult';
 import { AnalysisResponse } from '@/types';
@@ -45,17 +46,9 @@ export default function VerifyPage() {
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-3 group">
               <div className="relative">
-                <div className="absolute inset-0 bg-brand-500/30 rounded-xl blur-md" />
-                <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 via-brand-600 to-brand-800 flex items-center justify-center border border-brand-400/20">
-                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
-                    <circle cx="10.5" cy="10.5" r="7" />
-                    <line x1="10.5" y1="3.5" x2="10.5" y2="5" strokeWidth={1.2} opacity={0.45} />
-                    <line x1="10.5" y1="16" x2="10.5" y2="17.5" strokeWidth={1.2} opacity={0.45} />
-                    <line x1="3.5" y1="10.5" x2="5" y2="10.5" strokeWidth={1.2} opacity={0.45} />
-                    <line x1="16" y1="10.5" x2="17.5" y2="10.5" strokeWidth={1.2} opacity={0.45} />
-                    <path strokeLinecap="round" d="M16.2 16.2 L21 21" strokeWidth={2.2} />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 10.5 L10 12.5 L13.5 8.5" strokeWidth={1.8} />
-                  </svg>
+                <div className="absolute inset-0 bg-brand-500/20 rounded-xl blur-md" />
+                <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-brand-400/20 bg-[#0d0d1f]">
+                  <Image src="/logo.png" alt="TruthLens Logo" fill className="object-contain p-0.5" />
                 </div>
               </div>
               <div>
@@ -222,12 +215,8 @@ export default function VerifyPage() {
         <div className="h-[1px] bg-gradient-to-r from-transparent via-brand-500/15 to-transparent" />
         <div className="py-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-gray-600">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-gradient-to-br from-brand-600 to-brand-800 flex items-center justify-center">
-              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
-                <circle cx="10.5" cy="10.5" r="7" />
-                <path strokeLinecap="round" d="M16.2 16.2 L21 21" strokeWidth={2.2} />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 10.5 L10 12.5 L13.5 8.5" strokeWidth={1.8} />
-              </svg>
+            <div className="relative w-5 h-5 rounded overflow-hidden bg-[#0d0d1f] border border-brand-500/20">
+              <Image src="/logo.png" alt="TruthLens Logo" fill className="object-contain" />
             </div>
             <span>TruthLens &copy; 2026</span>
           </div>

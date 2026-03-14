@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 
 function scrollToSection(id: string) {
   const target = document.getElementById(id);
@@ -27,24 +28,6 @@ function scrollToSection(id: string) {
   requestAnimationFrame(step);
 }
 
-/* ─────────────────── Logo SVG ─────────────────── */
-function TruthLensLogo({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
-      {/* Outer lens circle */}
-      <circle cx="10.5" cy="10.5" r="7" />
-      {/* Lens aperture cross-hairs */}
-      <line x1="10.5" y1="3.5" x2="10.5" y2="5" strokeWidth={1.2} opacity={0.45} />
-      <line x1="10.5" y1="16" x2="10.5" y2="17.5" strokeWidth={1.2} opacity={0.45} />
-      <line x1="3.5" y1="10.5" x2="5" y2="10.5" strokeWidth={1.2} opacity={0.45} />
-      <line x1="16" y1="10.5" x2="17.5" y2="10.5" strokeWidth={1.2} opacity={0.45} />
-      {/* Handle */}
-      <path strokeLinecap="round" d="M16.2 16.2 L21 21" strokeWidth={2.2} />
-      {/* Check inside lens */}
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 10.5 L10 12.5 L13.5 8.5" strokeWidth={1.8} />
-    </svg>
-  );
-}
 
 export default function LandingPage() {
   return (
@@ -54,9 +37,9 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="absolute inset-0 bg-brand-500/30 rounded-xl blur-md" />
-              <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 via-brand-600 to-brand-800 flex items-center justify-center border border-brand-400/20">
-                <TruthLensLogo className="w-5 h-5 text-white" />
+              <div className="absolute inset-0 bg-brand-500/20 rounded-xl blur-md" />
+              <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-brand-400/20 bg-[#0d0d1f]">
+                <Image src="/logo.png" alt="TruthLens Logo" fill className="object-contain p-0.5" />
               </div>
             </div>
             <div>
@@ -602,10 +585,8 @@ export default function LandingPage() {
         <div className="py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-600 to-brand-800 flex items-center justify-center border border-brand-500/20">
-                  <TruthLensLogo className="w-4 h-4 text-white" />
-                </div>
+              <div className="relative w-7 h-7 rounded-lg overflow-hidden border border-brand-500/20 bg-[#0d0d1f]">
+                <Image src="/logo.png" alt="TruthLens Logo" fill className="object-contain p-0.5" />
               </div>
               <div>
                 <span className="font-bold text-sm">
