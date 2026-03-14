@@ -46,7 +46,7 @@ export default function VerifyPage() {
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-3 group">
               <div className="relative w-11 h-11 flex-shrink-0">
-                <Image src="/logo.png" alt="TruthLens Logo" fill className="object-contain" priority />
+                <Image src="/logo.png" alt="TruthLens Logo" fill sizes="44px" className="object-contain" priority />
               </div>
               <div>
                 <span className="text-lg font-bold">
@@ -213,7 +213,7 @@ export default function VerifyPage() {
         <div className="py-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-gray-600">
           <div className="flex items-center gap-2">
             <div className="relative w-6 h-6 flex-shrink-0">
-              <Image src="/logo.png" alt="TruthLens Logo" fill className="object-contain" />
+              <Image src="/logo.png" alt="TruthLens Logo" fill sizes="24px" className="object-contain" />
             </div>
             <span>TruthLens &copy; 2026</span>
           </div>

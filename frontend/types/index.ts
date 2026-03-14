@@ -32,6 +32,7 @@ export interface Source {
   publishDate?: string;
   rating?: string;
   description?: string;
+  snippet?: string;
 }
 
 export interface FactCheckResult {
@@ -41,6 +42,8 @@ export interface FactCheckResult {
   summary?: string;
   explanation?: string;
   redFlags?: string[];
+  groundingUsed?: boolean;
+  searchQueries?: string[];
 }
 
 export interface SimilarArticle {

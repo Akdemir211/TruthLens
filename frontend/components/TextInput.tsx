@@ -66,7 +66,7 @@ export default function TextInput({ onAnalyze, isLoading }: TextInputProps) {
                     />
                   </div>
                   <span className="text-xs text-gray-600 tabular-nums">
-                    {text.length.toLocaleString()} / {maxLength.toLocaleString()}
+                    {text.length.toLocaleString('tr-TR')} / {maxLength.toLocaleString('tr-TR')}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">

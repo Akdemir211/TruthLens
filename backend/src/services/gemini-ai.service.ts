@@ -15,6 +15,13 @@ export interface GeminiAnalysisResult {
   claims: GeminiClaim[];
   redFlags: string[];
   explanation: string;
+  groundingUsed?: boolean;
+  searchQueries?: string[];
+  groundingSources?: Array<{
+    title: string;
+    uri: string;
+    snippet?: string;
+  }>;
 }
 
 const VALID_VERDICTS = ['true', 'false', 'misleading', 'unverified'] as const;
@@ -49,10 +56,15 @@ class GeminiAIService {
       generationConfig: {
         temperature: 0.1,
         topP: 0.8,
-        maxOutputTokens: 2048,
+        maxOutputTokens: 8192,
       },
+      tools: [
+        {
+          googleSearch: {},
+        },
+      ],
     });
-    logger.info('✅ TruthAI (Gemini) hazır');
+    logger.info('✅ TruthAI (Gemini) hazır - Google Search Grounding aktif');
   }
 
   async analyzeNews(text: string): Promise<GeminiAnalysisResult | null> {
@@ -67,6 +79,8 @@ class GeminiAIService {
     });
 
     const prompt = `Sen TruthAI'sın — Türk medyasındaki dezenformasyon ve sahte haberleri tespit etmek için geliştirilmiş, uzman düzeyinde bir haber doğrulama sistemi.
+
+⚠️ ÖZEL TALİMAT: Bu haber güncel bir olay içeriyorsa (örn: "bugün", "dün", "geçen hafta", teknoloji duyuruları, siyasi gelişmeler, son dakika haberleri), Google Search ile web kaynaklarını kontrol et ve bulgularını analizine dahil et. Güncel olaylarda kaynaklardan edindiğin bilgileri kullan.
 
 HABER METNİ:
 """
@@ -206,13 +220,61 @@ Her iddia için:
 
       logger.info(`🤖 Ham yanıt (ilk 300): ${responseText.substring(0, 300)}`);
 
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        logger.error('❌ JSON parse edilemedi');
-        return null;
+      // YENİ: Grounding metadata'yı çıkar
+      const groundingMetadata = result.response.candidates?.[0]?.groundingMetadata;
+      let groundingUsed = false;
+      let searchQueries: string[] = [];
+      let groundingSources: Array<{ title: string; uri: string; snippet?: string }> = [];
+
+      if (groundingMetadata) {
+        groundingUsed = true;
+        searchQueries = groundingMetadata.webSearchQueries || [];
+        
+        logger.info(`🔍 Google Search kullanıldı!`);
+        logger.info(`   Sorgu sayısı: ${searchQueries.length}`);
+        logger.info(`   Kaynak sayısı: ${groundingMetadata.groundingChunks?.length || 0}`);
+        
+        if (searchQueries.length > 0) {
+          logger.info(`   Sorgular: ${searchQueries.join(', ')}`);
+        }
+
+        groundingMetadata.groundingChunks?.forEach((chunk: any, i: number) => {
+          if (chunk.web) {
+            logger.info(`   [${i + 1}] ${chunk.web.title} - ${chunk.web.uri}`);
+            groundingSources.push({
+              title: chunk.web.title || 'Başlıksız',
+              uri: chunk.web.uri || '',
+              snippet: chunk.web.snippet,
+            });
+          }
+        });
+      } else {
+        logger.info(`ℹ️ Google Search kullanılmadı (model kendi bilgisi yeterli buldu)`);
       }
 
-      const parsed = JSON.parse(jsonMatch[0]);
+      // Markdown kod bloğu varsa içinden JSON'ı çıkar
+      let jsonStr = responseText;
+      const mdBlock = responseText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+      if (mdBlock) {
+        jsonStr = mdBlock[1];
+      } else {
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          logger.error('❌ JSON parse edilemedi — Ham yanıt:');
+          logger.error(responseText.substring(0, 500));
+          return null;
+        }
+        jsonStr = jsonMatch[0];
+      }
+
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch {
+        logger.error('❌ JSON.parse başarısız — Yanıt kesilmiş olabilir');
+        logger.error(`Yanıt uzunluğu: ${responseText.length} karakter`);
+        return null;
+      }
 
       const claims: GeminiClaim[] = Array.isArray(parsed.claims)
         ? parsed.claims.slice(0, 4).map((c: Record<string, unknown>) => ({
@@ -241,14 +303,25 @@ Her iddia için:
           ? parsed.redFlags.map(String).filter(Boolean).slice(0, 6)
           : [],
         explanation: String(parsed.explanation || '').trim() || 'Açıklama yok',
+        groundingUsed,
+        searchQueries,
+        groundingSources,
       };
 
-      logger.info(`✅ TruthAI sonuç: ${output.overallVerdict.toUpperCase()} | Skor: ${output.credibilityScore} | ${claims.length} iddia | ${output.redFlags.length} uyarı`);
+      logger.info(`✅ TruthAI sonuç: ${output.overallVerdict.toUpperCase()} | Skor: ${output.credibilityScore} | ${claims.length} iddia | ${output.redFlags.length} uyarı${groundingUsed ? ' | 🌐 Grounding kullanıldı' : ''}`);
 
       return output;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      logger.error(`❌ TruthAI hatası: ${msg}`);
+
+      if (msg.includes('403') || msg.includes('leaked') || msg.includes('API key')) {
+        logger.error('❌ GEMİNİ API ANAHTARI GEÇERSİZ veya SINIRI AŞILDI!');
+        logger.error('👉 Yeni anahtar almak için: https://aistudio.google.com/app/apikey');
+        logger.error('👉 Yeni anahtarı backend/.env dosyasındaki GEMINI_API_KEY satırına yapıştır.');
+      } else {
+        logger.error(`❌ TruthAI hatası: ${msg}`);
+      }
+
       return null;
     }
   }
