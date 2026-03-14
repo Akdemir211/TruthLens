@@ -37,6 +37,10 @@ export interface Source {
 export interface FactCheckResult {
   claims: Claim[];
   overallVerdict: string;
+  credibilityScore?: number;
+  summary?: string;
+  explanation?: string;
+  redFlags?: string[];
 }
 
 export interface SimilarArticle {

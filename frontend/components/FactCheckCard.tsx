@@ -112,7 +112,7 @@ export default function FactCheckCard({ claim }: FactCheckCardProps) {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
                   </svg>
                 </div>
-                <span className="text-xs font-bold text-brand-300 uppercase tracking-wider">Gemini AI Analizi</span>
+                <span className="text-xs font-bold text-brand-300 uppercase tracking-wider">TruthAI Analizi</span>
               </div>
               <p className="text-sm text-gray-400 leading-relaxed">{description}</p>
             </div>

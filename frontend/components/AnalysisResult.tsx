@@ -40,18 +40,60 @@ export default function AnalysisResult({ result, onReset }: AnalysisResultProps)
         <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent to-brand-500/15" />
       </div>
 
+      {/* Summary + Red Flags */}
+      {(result.factCheck.summary || (result.factCheck.redFlags && result.factCheck.redFlags.length > 0)) && (
+        <div className="glass-card p-6">
+          {result.factCheck.summary && (
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <svg className="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+                <span className="text-xs font-bold text-brand-300 uppercase tracking-wider">Haber Özeti</span>
+              </div>
+              <p className="text-sm text-gray-300 leading-relaxed">{result.factCheck.summary}</p>
+            </div>
+          )}
+
+          {result.factCheck.redFlags && result.factCheck.redFlags.length > 0 && (
+            <div>
+              {result.factCheck.summary && (
+                <div className="h-[1px] bg-gradient-to-r from-transparent via-warning-500/20 to-transparent my-4" />
+              )}
+              <div className="flex items-center gap-2 mb-3">
+                <svg className="w-4 h-4 text-warning-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+                <span className="text-xs font-bold text-warning-400 uppercase tracking-wider">Tespit Edilen Uyarılar</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {result.factCheck.redFlags.map((flag, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-warning-500/10 border border-warning-500/20 text-warning-300"
+                  >
+                    <span className="w-1 h-1 rounded-full bg-warning-400 flex-shrink-0" />
+                    {flag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Fact Check */}
       {result.factCheck.claims.length > 0 && (
         <div className="glass-card p-6 sm:p-7">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500/25 to-brand-700/15 flex items-center justify-center border border-brand-500/15">
-              <svg className="w-4.5 h-4.5 text-brand-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <svg className="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
               </svg>
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">TruthAI Değerlendirmesi</h3>
-              <p className="text-xs text-gray-600">TruthAI motoru ile analiz</p>
+              <h3 className="text-lg font-bold text-white">TruthAI İddia Analizi</h3>
+              <p className="text-xs text-gray-600">{result.factCheck.claims.length} iddia tespit edildi ve ayrı ayrı incelendi</p>
             </div>
           </div>
           <div className="space-y-4">
@@ -59,6 +101,11 @@ export default function AnalysisResult({ result, onReset }: AnalysisResultProps)
               <FactCheckCard key={claim.id} claim={claim} />
             ))}
           </div>
+          {result.factCheck.explanation && (
+            <div className="mt-5 p-4 rounded-xl bg-brand-500/[0.04] border border-brand-500/10">
+              <p className="text-xs text-gray-500 leading-relaxed">{result.factCheck.explanation}</p>
+            </div>
+          )}
         </div>
       )}
 

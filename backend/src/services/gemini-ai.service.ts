@@ -1,15 +1,36 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import logger from '../utils/logger';
 
-export interface GeminiFactCheckResult {
-  isTrue: boolean;
+export interface GeminiClaim {
+  text: string;
+  verdict: 'true' | 'false' | 'misleading' | 'unverified';
   confidence: number;
   explanation: string;
-  verdict: 'true' | 'false' | 'misleading' | 'unverified';
+}
+
+export interface GeminiAnalysisResult {
+  overallVerdict: 'true' | 'false' | 'misleading' | 'unverified';
+  credibilityScore: number;
+  summary: string;
+  claims: GeminiClaim[];
+  redFlags: string[];
+  explanation: string;
+}
+
+const VALID_VERDICTS = ['true', 'false', 'misleading', 'unverified'] as const;
+type Verdict = typeof VALID_VERDICTS[number];
+
+function sanitizeVerdict(raw: unknown): Verdict {
+  const v = String(raw || '').toLowerCase().trim();
+  return VALID_VERDICTS.includes(v as Verdict) ? (v as Verdict) : 'unverified';
+}
+
+function clampScore(n: unknown): number {
+  return Math.max(5, Math.min(95, Math.round(Number(n) || 50)));
 }
 
 class GeminiAIService {
-  private model: any = null;
+  private model: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null = null;
   private ready = false;
 
   private ensureReady() {
@@ -18,95 +39,216 @@ class GeminiAIService {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      logger.error('❌ GEMINI_API_KEY bulunamadı! .env dosyasını kontrol edin.');
+      logger.error('❌ GEMINI_API_KEY bulunamadı!');
       return;
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    this.model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-    logger.info('✅ Gemini AI hazır (model: gemini-2.5-flash)');
+    this.model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      generationConfig: {
+        temperature: 0.1,
+        topP: 0.8,
+        maxOutputTokens: 2048,
+      },
+    });
+    logger.info('✅ TruthAI (Gemini) hazır');
   }
 
-  async factCheck(text: string): Promise<GeminiFactCheckResult | null> {
+  async analyzeNews(text: string): Promise<GeminiAnalysisResult | null> {
     this.ensureReady();
-
     if (!this.model) {
-      logger.error('❌ Gemini model yüklenemedi');
+      logger.error('❌ Model yüklenemedi');
       return null;
     }
 
+    const today = new Date().toLocaleDateString('tr-TR', {
+      day: 'numeric', month: 'long', year: 'numeric',
+    });
+
+    const prompt = `Sen TruthAI'sın — Türk medyasındaki dezenformasyon ve sahte haberleri tespit etmek için geliştirilmiş, uzman düzeyinde bir haber doğrulama sistemi.
+
+HABER METNİ:
+"""
+${text}
+"""
+
+BUGÜNÜN TARİHİ: ${today}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GÖREV: Aşağıdaki 5 boyutta bu metni titizlikle analiz et
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## BOYUT 1 — TEMEL DOĞRULUK
+Metindeki temel iddiaları bilgi tabanınla karşılaştır.
+- Hangi iddiaları kesin olarak doğrulayabiliyorsun?
+- Hangileri tarihsel/bilimsel kayıtlarla çelişiyor?
+- Hangileri hakkında bilgin yetersiz veya bilgi kesim tarihini aşıyor?
+
+## BOYUT 2 — KAYNAK ANALİZİ
+- Kaynaklar açıkça belirtilmiş mi? Kim tarafından?
+- "İddia edildi", "öğrenildi", "kulisler yansıyor" gibi belirsiz atıflar var mı?
+- Anonim veya doğrulanamaz kaynaklar kullanılmış mı?
+- Kaynakların kurumsal güvenilirliği nedir?
+
+## BOYUT 3 — DİL VE ÜSLUP ANALİZİ
+- Duygusal, provokatif veya abartılı dil kullanılmış mı?
+- Taraflı yorum mu, nesnel haber mi?
+- Başlık ile içerik birbiriyle tutarlı mı?
+- Okuyucuyu manipüle etmeye yönelik kalıplar var mı?
+
+## BOYUT 4 — BAĞLAM ANALİZİ
+- Önemli bağlam bilgisi eksik mi veya kasıtlı çıkarılmış mı?
+- Doğru bir bilgi yanıltıcı bir bağlamda sunuluyor mu?
+- Tarih, yer, kişi bilgileri tutarlı ve doğrulanabilir mi?
+
+## BOYUT 5 — MANTIKSAL TUTARLILIK
+- Metinde iç çelişkiler var mı?
+- Yanıltıcı nedensellik bağlantıları kurulmuş mu?
+- Sonuçlar öncüllerden mantıksal olarak çıkıyor mu?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VERDİKT KURALLARI (MUTLAKA UY)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"true" → Bilgi tabanındaki gerçeklerle güvenle doğrulanıyor
+  Örnekler: Bilinen tarihsel olaylar, bilimsel gerçekler, doğrulanmış resmi açıklamalar
+  Temel güvenilirlik puanı: 75
+
+"false" → SADECE şu durumlarda kullan:
+  • Fiziksel veya bilimsel olarak kesinlikle imkansız (örn: insan uçtu, ölü dirildi)
+  • Belgelenmiş tarihsel gerçekle doğrudan, kesin çelişki (örn: Atatürk 1950'de öldü)
+  • Bilimsel konsensüsle açıkça çelişen iddia (örn: Dünya düzdür)
+  ❌ BİLMEDİĞİN için "false" deme! Bilmemek ≠ olmamış demek.
+  ❌ Güncel siyasi haberler, son dakika gelişmeleri için "false" kullanma.
+  Temel güvenilirlik puanı: 10
+
+"misleading" → Gerçek bilgi içeriyor ama çarpıtılmış/yanıltıcı biçimde sunuluyor
+  Örnekler: Bağlamdan koparılmış alıntı, seçici istatistik, doğru olay yanlış neden
+  Temel güvenilirlik puanı: 35
+
+"unverified" → Doğrulayamıyor veya çürütemiyorsun
+  • Bilgi tabanında bu olay hakkında yeterli bilgi yok
+  • Muhtemelen bilgi kesim tarihinden sonra gerçekleşmiş
+  • Özel/lokal bir olay, yetersiz veri
+  ⚠️ Emin değilsen MUTLAKA "unverified" kullan, asla varsayım yapma.
+  Temel güvenilirlik puanı: 50
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GÜVENİLİRLİK PUANLAMA (credibilityScore: 0-100)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Temel puandan başla, aşağıdaki modifikasyonları uygula:
+
+EKLE (+):
+  +10 → İddia kesin kayıtlarla birebir doğrulanıyor
+  +8  → Birden fazla güvenilir fakt uyuşuyor
+  +5  → Güvenilir kurumsal kaynak adı açıkça belirtilmiş (bakanlık, üniversite vb.)
+  +5  → Tarih, yer, kişi bilgileri tutarlı ve doğrulanabilir nitelikte
+  +3  → Nötr, profesyonel üslup kullanılmış
+  +3  → Başlık ile içerik birbiriyle tutarlı
+
+ÇIKAR (-):
+  -10 → Fiziksel/bilimsel kesin imkansızlık
+  -8  → Belgelenmiş tarihi/bilimsel gerçekle doğrudan ve kesin çelişki
+  -7  → Hiç kaynak gösterilmemiş, iddianın kaynağı belirsiz
+  -5  → Belirsiz veya anonim kaynak ("iddia edildi", "öğrenildi", "bilinmeyen kaynaklar")
+  -5  → Güçlü duygusal, provokatif veya manipülatif dil
+  -5  → Kritik bağlam kasıtlı olarak çıkarılmış veya eksik
+  -4  → Clickbait niteliğinde abartılı başlık
+  -3  → Metin içinde iç çelişkiler veya mantık hataları
+  -3  → Tarih, yer veya kişi bilgilerinde tutarsızlık
+
+Son puan: Temel puan + eklemeler - çıkarmalar
+Minimum: 5, Maksimum: 95
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+İDDİA ÇIKARMA TALİMATI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Metinden 2-4 adet spesifik, doğrulanabilir iddia çıkar.
+
+İyi iddia (spesifik): "Türkiye'de enflasyon Ocak ayında yüzde 67'ye ulaştı"
+Kötü iddia (çok genel): "Ekonomi kötüye gidiyor"
+
+İyi iddia (doğrulanabilir): "X Ülkesi Türkiye'ye savaş ilan etti"
+Kötü iddia (yorum): "Hükümet halkı aldatıyor"
+
+Her iddia için:
+- Kendi verdict ve confidence değerini belirle (genel verdict'ten bağımsız olabilir)
+- 2-3 cümlelik Türkçe açıklama yaz
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ÇIKTI — YALNIZCA JSON, BAŞKA HİÇBİR ŞEY YAZMA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{
+  "overallVerdict": "true|false|misleading|unverified",
+  "credibilityScore": <5-95 arası tam sayı>,
+  "summary": "<Haberin 1-2 cümlelik tarafsız özeti>",
+  "claims": [
+    {
+      "text": "<Metinden çıkarılan spesifik iddia>",
+      "verdict": "true|false|misleading|unverified",
+      "confidence": <0-100 arası tam sayı>,
+      "explanation": "<Bu iddia için 2-3 cümle Türkçe analiz>"
+    }
+  ],
+  "redFlags": ["<Tespit edilen uyarı işareti 1>", "<Uyarı 2>"],
+  "explanation": "<Genel analiz sonucu: 3-5 cümle kapsamlı Türkçe açıklama>"
+}`;
+
     try {
-      logger.info(`🤖 Gemini'a soruluyor: "${text.substring(0, 80)}..."`);
-
-      const today = new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
-
-      const prompt = `Sen profesyonel bir haber doğrulama uzmanısın.
-
-HABER: "${text}"
-TARİH: ${today}
-
-VERDICT SEÇİM KURALLARI (SIRAYLAtakip et):
-
-ADIM 1: Bu olay fiziksel/biyolojik olarak İMKANSIZ mı?
-- Ölü birinin dirilmesi → İMKANSIZ → verdict: "false"
-- İnsanın uçması → İMKANSIZ → verdict: "false"
-- Eğer imkansız DEĞİLSE → ADIM 2'ye geç
-
-ADIM 2: Bu olay tarihsel/bilimsel bir GERÇEKLE kesin çelişiyor mu?
-- "Atatürk 1950'de öldü" → 1938'de vefat etti, KESİN çelişki → verdict: "false"
-- "Dünya düzdür" → Bilimsel çelişki → verdict: "false"
-- Eğer kesin çelişki YOKSA → ADIM 3'e geç
-
-ADIM 3: Bu olayı KESİN OLARAK BİLİYOR MUSUN?
-- Evet, bu olay kesinlikle gerçek → verdict: "true"
-- Evet, kısmen doğru ama çarpıtılmış → verdict: "misleading"
-- HAYIR, bu olayı bilmiyorum veya emin değilim → ADIM 4'e geç
-
-ADIM 4: BİLMEDİĞİN HER ŞEY "unverified" OLUR
-Eğer bu adıma geldiysen, verdict MUTLAKA "unverified" olmalıdır.
-
-YASAK: "Bu kadar büyük bir olay olsaydı bilirdim" şeklinde çıkarım yaparak "false" demek YASAKTIR.
-YASAK: Bilgi tabanında olmayan bir olaya "false" demek YASAKTIR.
-YASAK: Siyasi olaylar, savaşlar, suikastler, askeri operasyonlar hakkında "bilgim yok ama yanlış olmalı" mantığı YASAKTIR.
-
-NEDEN: Senin bilgi tabanın belirli bir tarihe kadar güncellenir. O tarihten sonra gerçekleşen olayları bilemezsin. Bilmemek ≠ olmamış demek.
-
-"false" SADECE VE SADECE: Fiziksel imkansızlık VEYA tarihsel/bilimsel kesin çelişki durumunda kullanılır. BAŞKA HİÇBİR DURUMDA "false" KULLANMA.
-
-JSON formatında cevap ver (başka bir şey yazma):
-{"isTrue":boolean,"confidence":0-100,"verdict":"true"|"false"|"misleading"|"unverified","explanation":"Türkçe 3-4 cümle açıklama"}`;
+      logger.info(`🔍 TruthAI analiz başlatıldı: "${text.substring(0, 80)}..."`);
 
       const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const responseText = response.text();
+      const responseText = result.response.text();
 
-      logger.info(`🤖 Gemini raw: ${responseText.substring(0, 200)}`);
+      logger.info(`🤖 Ham yanıt (ilk 300): ${responseText.substring(0, 300)}`);
 
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
-        logger.error('❌ Gemini cevabı JSON olarak parse edilemedi');
+        logger.error('❌ JSON parse edilemedi');
         return null;
       }
 
       const parsed = JSON.parse(jsonMatch[0]);
 
-      const rawVerdict = String(parsed.verdict || '').toLowerCase().trim();
-      const validVerdicts = ['true', 'false', 'misleading', 'unverified'] as const;
-      const verdict = validVerdicts.includes(rawVerdict as any) ? rawVerdict as typeof validVerdicts[number] : 'unverified';
+      const claims: GeminiClaim[] = Array.isArray(parsed.claims)
+        ? parsed.claims.slice(0, 4).map((c: Record<string, unknown>) => ({
+            text: String(c.text || '').trim() || 'İddia metni yok',
+            verdict: sanitizeVerdict(c.verdict),
+            confidence: clampScore(c.confidence),
+            explanation: String(c.explanation || '').trim() || 'Açıklama yok',
+          }))
+        : [];
 
-      const output: GeminiFactCheckResult = {
-        isTrue: !!parsed.isTrue,
-        confidence: Math.min(Math.max(Number(parsed.confidence) || 50, 0), 100),
-        explanation: String(parsed.explanation || 'Açıklama yok'),
-        verdict
+      if (claims.length === 0) {
+        claims.push({
+          text: text.length > 200 ? text.substring(0, 197) + '...' : text,
+          verdict: sanitizeVerdict(parsed.overallVerdict),
+          confidence: clampScore(parsed.credibilityScore),
+          explanation: String(parsed.explanation || 'Analiz tamamlandı').trim(),
+        });
+      }
+
+      const output: GeminiAnalysisResult = {
+        overallVerdict: sanitizeVerdict(parsed.overallVerdict),
+        credibilityScore: clampScore(parsed.credibilityScore),
+        summary: String(parsed.summary || '').trim() || 'Özet mevcut değil',
+        claims,
+        redFlags: Array.isArray(parsed.redFlags)
+          ? parsed.redFlags.map(String).filter(Boolean).slice(0, 6)
+          : [],
+        explanation: String(parsed.explanation || '').trim() || 'Açıklama yok',
       };
 
-      logger.info(`🤖 SONUÇ: ${output.verdict.toUpperCase()} (%${output.confidence} güven)`);
-      logger.info(`🤖 AÇIKLAMA: ${output.explanation}`);
+      logger.info(`✅ TruthAI sonuç: ${output.overallVerdict.toUpperCase()} | Skor: ${output.credibilityScore} | ${claims.length} iddia | ${output.redFlags.length} uyarı`);
 
       return output;
-    } catch (err: any) {
-      logger.error(`❌ Gemini hatası: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error(`❌ TruthAI hatası: ${msg}`);
       return null;
     }
   }

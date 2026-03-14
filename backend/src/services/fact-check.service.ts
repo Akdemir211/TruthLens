@@ -1,43 +1,53 @@
-import { Claim } from '../types';
+import { Claim, FactCheckResult } from '../types';
 import { geminiAIService } from './gemini-ai.service';
 import logger from '../utils/logger';
 
 class FactCheckService {
-  async checkFacts(text: string): Promise<{ claims: Claim[], overallVerdict: string }> {
+  async checkFacts(text: string): Promise<FactCheckResult> {
     try {
-      logger.info('🔍 Haber doğrulama başlıyor (SADECE Gemini)');
+      logger.info('🔍 TruthAI haber doğrulama başlıyor...');
 
-      const geminiResult = await geminiAIService.factCheck(text);
+      const result = await geminiAIService.analyzeNews(text);
 
-      if (!geminiResult) {
-        logger.error('❌ Gemini yanıt veremedi');
-        return { claims: [], overallVerdict: 'error' };
+      if (!result) {
+        logger.error('❌ TruthAI yanıt vermedi');
+        return { claims: [], overallVerdict: 'error', summary: '', redFlags: [] };
       }
 
-      const claim: Claim = {
-        id: `gemini-${Date.now()}`,
-        text: text.length > 200 ? text.substring(0, 197) + '...' : text,
-        verdict: geminiResult.verdict,
-        confidence: geminiResult.confidence / 100,
-        sources: [{
-          title: '🤖 Gemini AI Analizi',
-          url: '',
-          credibility: 95,
-          domain: 'google-gemini-ai',
-          rating: geminiResult.verdict,
-          description: geminiResult.explanation
-        }]
-      };
+      const claims: Claim[] = result.claims.map((c, i) => ({
+        id: `truthai-claim-${i + 1}-${Date.now()}`,
+        text: c.text,
+        verdict: c.verdict,
+        confidence: c.confidence / 100,
+        sources: [
+          {
+            title: 'TruthAI Analizi',
+            url: '',
+            credibility: 95,
+            domain: 'truthai-engine',
+            rating: c.verdict,
+            description: c.explanation,
+          },
+        ],
+      }));
 
-      logger.info(`✅ Sonuç: ${geminiResult.verdict.toUpperCase()} (%${geminiResult.confidence})`);
+      logger.info(`✅ ${claims.length} iddia analiz edildi | Genel karar: ${result.overallVerdict.toUpperCase()} | Skor: ${result.credibilityScore}`);
+      if (result.redFlags.length > 0) {
+        logger.info(`⚠️ Uyarılar: ${result.redFlags.join(', ')}`);
+      }
 
       return {
-        claims: [claim],
-        overallVerdict: geminiResult.verdict
+        claims,
+        overallVerdict: result.overallVerdict,
+        credibilityScore: result.credibilityScore,
+        summary: result.summary,
+        explanation: result.explanation,
+        redFlags: result.redFlags,
       };
-    } catch (error: any) {
-      logger.error('❌ Fact check hatası:', error.message);
-      return { claims: [], overallVerdict: 'error' };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error('❌ Fact check servis hatası:', msg);
+      return { claims: [], overallVerdict: 'error', summary: '', redFlags: [] };
     }
   }
 }
