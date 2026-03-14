@@ -2,6 +2,15 @@
 
 Bu rehber, TruthLens projesini ücretsiz olarak internette yayınlamak için adım adım talimatlar içerir.
 
+## Tek Tıkla Deploy Bağlantıları
+
+| Servis | Bağlantı |
+|--------|----------|
+| **Backend (Render)** | [Deploy to Render](https://render.com/deploy?repo=https://github.com/Akdemir211/TruthLens) |
+| **Frontend (Vercel)** | [Deploy to Vercel](https://vercel.com/new/clone?repository-url=https://github.com/Akdemir211/TruthLens) |
+
+---
+
 ## Mimari
 
 - **Frontend**: Next.js (Vercel)
@@ -28,32 +37,28 @@ Backend önce yayınlanmalı çünkü frontend, API URL'sine ihtiyaç duyacak.
 6. **Deploy** butonuna tıkla
 7. Yayınlandıktan sonra **Settings** → **Networking** → **Generate Domain** ile URL al (örn: `https://truthlens-api.up.railway.app`)
 
-### Seçenek B: Render
+### Seçenek B: Render (Tek Tıkla)
 
-1. [render.com](https://render.com) adresine git ve GitHub ile giriş yap
-2. **New** → **Web Service**
-3. TruthLens reposunu bağla
-4. Ayarlar:
-   - **Root Directory**: `backend`
-   - **Build Command**: `npm install && npm run build`
-   - **Start Command**: `npm start`
-   - **Instance Type**: Free
-5. **Environment** sekmesinde değişkenleri ekle (Railway ile aynı)
-6. **Create Web Service** ile yayınla
+1. [Deploy to Render](https://render.com/deploy?repo=https://github.com/Akdemir211/TruthLens) bağlantısına tıkla
+2. GitHub ile giriş yap
+3. **Apply** ile `render.yaml` ayarlarını uygula (Root Directory: backend otomatik)
+4. **Environment Variables** ekle: `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `NEWS_API_KEY`
+5. **Create Web Service** ile yayınla
+6. Deploy tamamlanınca backend URL'ini kopyala (örn: `https://truthlens-api.onrender.com`)
 
 ---
 
 ## Adım 2: Frontend'i Yayınla (Vercel)
 
-1. [vercel.com](https://vercel.com) adresine git ve GitHub ile giriş yap
-2. **Add New** → **Project**
-3. TruthLens reposunu seç
-4. **Configure Project**:
-   - **Root Directory**: `frontend` olarak ayarla (Edit → frontend seç)
+1. [Deploy to Vercel](https://vercel.com/new/clone?repository-url=https://github.com/Akdemir211/TruthLens) bağlantısına tıkla
+2. GitHub ile giriş yap (gerekirse)
+3. **Configure Project** ekranında:
+   - **Root Directory**: `frontend` olarak ayarla (Edit → frontend klasörünü seç)
    - **Framework Preset**: Next.js (otomatik algılanır)
-5. **Environment Variables** ekle:
-   - `NEXT_PUBLIC_API_URL` = Backend URL'in (örn: `https://truthlens-api.up.railway.app`)
-6. **Deploy** butonuna tıkla
+4. **Environment Variables** bölümüne git ve ekle:
+   - Name: `NEXT_PUBLIC_API_URL`
+   - Value: Backend URL'in (Render'dan aldığın, örn: `https://truthlens-api.onrender.com`)
+5. **Deploy** butonuna tıkla
 
 ---
 
