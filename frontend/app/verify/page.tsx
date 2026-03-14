@@ -45,11 +45,8 @@ export default function VerifyPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-3 group">
-              <div className="relative">
-                <div className="absolute inset-0 bg-brand-500/20 rounded-xl blur-md" />
-                <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-brand-400/20 bg-[#0d0d1f]">
-                  <Image src="/logo.png" alt="TruthLens Logo" fill className="object-contain p-0.5" />
-                </div>
+              <div className="relative w-11 h-11 flex-shrink-0">
+                <Image src="/logo.png" alt="TruthLens Logo" fill className="object-contain" priority />
               </div>
               <div>
                 <span className="text-lg font-bold">
@@ -215,7 +212,7 @@ export default function VerifyPage() {
         <div className="h-[1px] bg-gradient-to-r from-transparent via-brand-500/15 to-transparent" />
         <div className="py-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-gray-600">
           <div className="flex items-center gap-2">
-            <div className="relative w-5 h-5 rounded overflow-hidden bg-[#0d0d1f] border border-brand-500/20">
+            <div className="relative w-6 h-6 flex-shrink-0">
               <Image src="/logo.png" alt="TruthLens Logo" fill className="object-contain" />
             </div>
             <span>TruthLens &copy; 2026</span>

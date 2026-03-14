@@ -36,11 +36,8 @@ export default function LandingPage() {
       <header className="border-b border-white/[0.06] bg-[#060714]/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-brand-500/20 rounded-xl blur-md" />
-              <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-brand-400/20 bg-[#0d0d1f]">
-                <Image src="/logo.png" alt="TruthLens Logo" fill className="object-contain p-0.5" />
-              </div>
+            <div className="relative w-11 h-11 flex-shrink-0">
+              <Image src="/logo.png" alt="TruthLens Logo" fill className="object-contain" priority />
             </div>
             <div>
               <span className="text-lg font-bold">
@@ -585,8 +582,8 @@ export default function LandingPage() {
         <div className="py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="relative w-7 h-7 rounded-lg overflow-hidden border border-brand-500/20 bg-[#0d0d1f]">
-                <Image src="/logo.png" alt="TruthLens Logo" fill className="object-contain p-0.5" />
+              <div className="relative w-8 h-8 flex-shrink-0">
+                <Image src="/logo.png" alt="TruthLens Logo" fill className="object-contain" />
               </div>
               <div>
                 <span className="font-bold text-sm">
